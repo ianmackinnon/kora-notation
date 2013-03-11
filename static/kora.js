@@ -174,6 +174,19 @@ var k = {
     className: "period",
     templateName: "period.html",
 
+    events: {
+      "click > .control > .addPeriod": function (event) {
+        if (event.which !== 1 || event.metakey || event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+        var index = this.model.collection.indexOf(this.model);
+        this.model.collection.addPeriod({
+          at: index
+        });
+      }
+    },
+
     render: function() {
       var view = this;
 
@@ -229,15 +242,26 @@ var k = {
       this.collection.each(this.add);
     },
 
-    add: function(period) {
+    add: function(period, collection, options) {
+      var at = options.at;
       var periodView = new PeriodView({
         model: period
       });
-      this._views.push(periodView);
+      if (_.isFinite(at)) {
+        this._views.splice(at, 0, periodView);
+      } else {
+        this._views.push(periodView);
+      }
       if (this._rendered) {
         periodView.render();
-        this.$el.append(periodView.$el);
+        if (_.isFinite(at)) {
+          window.views = this._views;
+          this._views[at + 1].$el.before(periodView.$el);
+        } else {
+          this.$el.append(periodView.$el);
+        }
       }
+
     },
 
     render: function() {
@@ -252,8 +276,8 @@ var k = {
   });
 
   var PeriodCollection = Backbone.Collection.extend({
-    addPeriod: function() {
-      this.add(new Period());
+    addPeriod: function(options) {
+      this.add(new Period(), options);
     }
   });
 
@@ -261,10 +285,11 @@ var k = {
   
   var BarView = Backbone.View.extend({
     tagName: "div",
+    className: "bar",
     templateName: "bar.html",
     
     events: {
-      "click .addPeriod": function (event) {
+      "click > .control > .addPeriod": function (event) {
         if (event.which !== 1 || event.metakey || event.shiftKey) {
           return;
         }
