@@ -1,0 +1,19 @@
+.cord
+{
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+}
+
+.rank
+{
+    display: inline-block;
+    padding: 0 8px;
+    height: 16px;
+}
+
+.period
+{
+    padding: 1px 0;
+    height: 16px;
+}
