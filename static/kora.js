@@ -250,7 +250,7 @@ var k = {
     
     initialize: function (attributes, options) {
       var c1 = new CordCollection([], {
-        length: 10
+        length: 11
       });
       var leftRank = new Rank({
         name: "left",
@@ -260,7 +260,7 @@ var k = {
       var rightRank = new Rank({
         name: "right",
         cordCollection: new CordCollection([], {
-          length: 11
+          length: 10
         })
       })
       this.rankCollection = new RankCollection([
