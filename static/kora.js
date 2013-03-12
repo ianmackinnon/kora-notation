@@ -88,6 +88,16 @@ var k = {
     },
 
     initialize: function (attributes, options) {
+    },
+
+    dumpString: function () {
+      if (this.get("state") == 1) { 
+        return "∩ ";
+      } else if (this.get("state") == -1) { 
+        return "∪ ";
+      } else { 
+        return "| ";
+      } 
     }
   });
 
@@ -119,7 +129,16 @@ var k = {
         }
       }
       models = this.models;
+    },
+
+    dumpString: function () {
+      var out = "";
+      this.each(function (cord) {
+        out += cord.dumpString();
+      });
+      return out;
     }
+
   });
 
 
@@ -143,7 +162,11 @@ var k = {
     }
   });
 
-  var Rank = Backbone.Model.extend();
+  var Rank = Backbone.Model.extend({
+    dumpString: function () {
+      return this.get("cordCollection").dumpString();
+    }
+  });
 
 
 
@@ -165,6 +188,16 @@ var k = {
   });
 
   var RankCollection = Backbone.Collection.extend({
+    dumpString: function () {
+      var out = "";
+      this.each(function (rank, i) {
+        if (!!i) {
+          out += "  ";
+        }
+        out += rank.dumpString();
+      });
+      return out;
+    }
   });
 
 
@@ -181,9 +214,17 @@ var k = {
         }
         event.preventDefault();
         var index = this.model.collection.indexOf(this.model);
-        this.model.collection.addPeriod({
+        this.model.collection.newPeriod({
           at: index
         });
+      },
+      "click > .control > .removePeriod": function (event) {
+        if (event.which !== 1 || event.metakey || event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+        var index = this.model.collection.indexOf(this.model);
+        this.model.collection.remove(this.model);
       }
     },
 
@@ -204,7 +245,7 @@ var k = {
 
   var Period = Backbone.Model.extend({
     defaults: {
-      duration: 1/4
+      duration: "1/"
     },
     
     initialize: function (attributes, options) {
@@ -226,6 +267,10 @@ var k = {
           leftRank,
           rightRank
         ]);
+    },
+    
+    dumpString: function () {
+      return this.rankCollection.dumpString() + " " + this.get("duration") + "\n";
     }
     
   });
@@ -236,8 +281,9 @@ var k = {
     tagName: "div",
 
     initialize: function() {
-      _(this).bindAll("add");
+      _(this).bindAll("add", "remove");
       this.collection.bind("add", this.add);
+      this.collection.bind("remove", this.remove);
       this._views = [];
       this.collection.each(this.add);
     },
@@ -264,6 +310,13 @@ var k = {
 
     },
 
+    remove: function(period, collection, options) {
+      var index = options.index;
+      var view = this._views[index];
+      this._views.splice(index, 1);
+      view.$el.detach();
+    },
+
     render: function() {
       var view = this;
       this._rendered = true;
@@ -276,9 +329,18 @@ var k = {
   });
 
   var PeriodCollection = Backbone.Collection.extend({
-    addPeriod: function(options) {
+    newPeriod: function(options) {
       this.add(new Period(), options);
+    },
+    
+    dumpString: function () {
+      var out = "";
+      this.each(function (period) {
+        out += period.dumpString();
+      });
+      return out;
     }
+
   });
 
 
@@ -294,7 +356,7 @@ var k = {
           return;
         }
         event.preventDefault();
-        this.model.periodCollection.addPeriod();
+        this.model.periodCollection.newPeriod();
       }
     },
 
@@ -323,7 +385,12 @@ var k = {
     
     initialize: function (attributes, options) {
       this.periodCollection = new PeriodCollection([new Period()]);
+    },
+
+    dumpString: function () {
+      return this.periodCollection.dumpString();
     }
+
   });
 
 
@@ -350,6 +417,16 @@ var k = {
   var BarCollection = Backbone.Collection.extend({
     initialize: function (models, options) {
       this.add(new Bar());
+    },
+
+    dumpString: function () {
+      var out = "";
+      out += "-----\n";
+      this.each(function (bar) {
+        out += bar.dumpString();
+        out += "-----\n";
+      });
+      return out;
     }
   });
 
@@ -365,6 +442,14 @@ var k = {
       $(this.el).html(k.template(this.templateName, {
         movement: this.model.toJSON()
       }));
+
+      var clip = new ZeroClipboard( this.$el.find(".clipboard"), {
+        moviePath: "/static/ZeroClipboard.swf"
+      } );
+
+      clip.on( 'mousedown', function(client) {
+        client.setText(view.model.dumpString());
+      } );
 
       var barCollectionView = new BarCollectionView({
         collection: this.model.barCollection
@@ -382,6 +467,10 @@ var k = {
 
     initialize: function (attributes, options) {
       this.barCollection = new BarCollection();
+    },
+
+    dumpString: function () {
+      return "\n" + this.barCollection.dumpString() + "\n";
     }
   });
 
@@ -400,6 +489,7 @@ $(window.document).ready(function () {
     model:movement
   });
   movementView.render();
-  window.movementView = movementView;
   $("body").append(movementView.$el);
+
+  window.movement = movement;
 });
