@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-all : jquery.min.js underscore-min.js backbone-min.js jquery.history.js URI.min.js ZeroClipboard.min.js ZeroClipboard.swf
+all : jquery.min.js underscore-min.js backbone-min.js jquery.history.js URI.min.js ZeroClipboard.min.js ZeroClipboard.swf fraction.js
 
 clean :
 	rm -f backbone-min.js underscore-min.js jquery.history.js URI.min.js ZeroClipboard.min.js ZeroClipboard.swf
@@ -31,5 +31,9 @@ ZeroClipboard.min.js:
 
 ZeroClipboard.swf:
 	wget https://raw.github.com/jonrohan/ZeroClipboard/master/$@ -O $@ || rm -f $@
+	ln -sf ../vendor/$@ ../static/$@
+
+fraction.js:
+	wget https://raw.github.com/cntx/fraction.js/master/$@ -O $@ || rm -f $@
 	ln -sf ../vendor/$@ ../static/$@
 

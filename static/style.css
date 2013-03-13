@@ -4,6 +4,22 @@ body {
     color: #333;
 }
 
+.movement
+{
+    width: 500px;
+}
+
+.bar
+{
+    padding-top: 16px;
+}
+
+.bar .header
+{
+    padding-bottom: 10px;
+    text-align: right;
+}
+
 .cord
 {
     display: inline-block;
@@ -28,4 +44,15 @@ body {
 {
     position: relative;
     top: -8px;
+}
+
+.duration
+{
+    display: inline-block;
+    width: 50px;
+}
+
+.duration input
+{
+    border: 0px;
 }

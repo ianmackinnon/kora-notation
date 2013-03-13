@@ -36,6 +36,36 @@ var k = {
       }, 100);
     }
     return _.template(k._templateCache[name], data);
+  },
+
+  editInteger: function ($target, callback) {
+    var $target = $(event.target);
+    var $input = $("<input>");
+    var value = $target.text();
+    value = parseInt(value);
+    $input.css({
+      "display": "inline-block",
+      "width": "20px"
+    });
+    $input.val(value);
+
+    var enter = function() {
+      var currentValue = $input.val()
+      currentValue = parseInt(currentValue);
+      $input.replaceWith($target);
+      callback(currentValue);
+    };
+
+    $input.keypress(function(event) {
+      if (event.which == 13) {
+        enter();
+      }
+    });
+    $input.blur(enter);
+
+    $target.replaceWith($input);
+    $input.focus();
+    $input.select();
   }
 };
 
@@ -89,9 +119,6 @@ var k = {
       state: 0
     },
 
-    initialize: function (attributes, options) {
-    },
-
     clone: function () {
       var other = new Cord({
         name: this.get("name"),
@@ -102,13 +129,13 @@ var k = {
     },
 
     dumpString: function () {
-      if (this.get("state") == 1) { 
+      if (this.get("state") == 1) {
         return "∩ ";
-      } else if (this.get("state") == -1) { 
+      } else if (this.get("state") == -1) {
         return "∪ ";
-      } else { 
+      } else {
         return "| ";
-      } 
+      }
     }
   });
 
@@ -284,41 +311,96 @@ var k = {
         event.preventDefault();
         var index = this.model.collection.indexOf(this.model);
         this.model.collection.remove(this.model);
+      },
+      "click .numerator": function (event) {
+        var view = this;
+        if (event.which !== 1 || event.metakey || event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+
+        k.editInteger($(event.target), function (value) {
+          var currentDuration = view.model.get("duration");
+          var duration = new Fraction(
+            value, currentDuration.denominator);
+          view.model.set("duration", duration);
+        });
+
+      },
+      "click .denominator": function (event) {
+        var view = this;
+        if (event.which !== 1 || event.metakey || event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+
+        k.editInteger($(event.target), function (value) {
+          var currentDuration = view.model.get("duration");
+          var duration = new Fraction(
+            currentDuration.numerator, value);
+          view.model.set("duration", duration);
+        });
+
       }
     },
 
-    render: function() {
+    initialize: function () {
+      var view = this;
+      this.model.on("change:duration", function (model, duration) {
+        view.reloadDuration();
+      });
+
+    },
+
+    render: function () {
       var view = this;
 
       $(this.el).html(k.template(this.templateName, {
         period: this.model.toJSON()
       }));
 
+      var denominator = this.$el.find(".denominator");
+      denominator.hover(function () {
+        $(this).css("cursor", "pointer");
+      }, function () {
+        $(this).css("cursor", null);
+      });
+
       var rankCollectionView = new RankCollectionView({
         collection: this.model.rankCollection
       });
       rankCollectionView.render()
       this.$el.find("span.notation").empty().append(rankCollectionView.$el);
+    },
+
+    reloadDuration: function () {
+      var duration = this.model.get("duration");
+      this.$el.find(".numerator").text(duration.numerator);
+      this.$el.find(".denominator").text(duration.denominator);
     }
   });
 
   var Period = Backbone.Model.extend({
     defaults: {
-      duration: "1/"
+      duration: new Fraction(1, 4)
     },
-    
+
     initialize: function (attributes, options) {
-      this.rankCollection = options.form.clone()
+      this.rankCollection = options.form.clone();
     },
-    
+
+    durationString: function () {
+      return "" + this.get("duration");
+    },
+
     dumpString: function () {
-      return " " + this.rankCollection.dumpString() + " " + this.get("duration") + "\n";
+      return " " + this.rankCollection.dumpString() + " " + this.durationString() + "\n";
     }
-    
+
   });
 
 
-  
+
   var PeriodCollectionView = Backbone.View.extend({
     tagName: "div",
 
@@ -380,7 +462,15 @@ var k = {
         form: this.form
       }), options);
     },
-    
+
+    duration: function () {
+      var acc = new Fraction(0);
+      this.each(function (period) {
+        acc = acc.add(period.get("duration"));
+      });
+      return acc;
+    },
+
     dumpString: function () {
       var out = "";
       this.each(function (period) {
@@ -392,12 +482,12 @@ var k = {
   });
 
 
-  
+
   var BarView = Backbone.View.extend({
     tagName: "div",
     className: "bar",
     templateName: "bar.html",
-    
+
     events: {
       "click > .control > .addPeriod": function (event) {
         if (event.which !== 1 || event.metakey || event.shiftKey) {
@@ -408,11 +498,18 @@ var k = {
       }
     },
 
+    initialize: function () {
+      this.listenTo(this.model.periodCollection, "add", this.reloadDuration);
+      this.listenTo(this.model.periodCollection, "remove", this.reloadDuration);
+      this.listenTo(this.model.periodCollection, "change:duration", this.reloadDuration);
+    },
+
     render: function () {
       var view = this;
 
       $(this.el).html(k.template(this.templateName, {
-        bar: this.model.toJSON()
+        bar: this.model.toJSON(),
+        duration: this.model.duration()
       }));
 
       var periodCollectionView = new PeriodCollectionView({
@@ -423,29 +520,45 @@ var k = {
       this.$el.find("div.notation").empty().append(periodCollectionView.$el);
     },
 
+    reloadDuration: function () {
+      var duration = this.model.duration();
+      this.$el.find(".header .numerator").text(duration.numerator);
+      this.$el.find(".header .denominator").text(duration.denominator);
+    }
+
   });
 
   var Bar = Backbone.Model.extend({
-    defaults: {
-      numerator: 4,
-      denominator: 4
-    },
-    
     initialize: function (attributes, options) {
+      var bar = this;
+      this.form = options.form;
       this.periodCollection = new PeriodCollection(null, {
-        form: options.form
+        form: bar.form
       });
+
+      this.periodCollection.newPeriod();
+      this.periodCollection.newPeriod();
+      this.periodCollection.newPeriod();
       this.periodCollection.newPeriod();
     },
 
+    duration: function () {
+      return this.periodCollection.duration();
+    },
+
     dumpString: function () {
-      return this.periodCollection.dumpString();
+      this.periodCollection.duration();
+
+      var out = "";
+      out += " " + this.form.dumpStringBar() + "\n";
+      out += this.periodCollection.dumpString();
+      return out;
     }
 
   });
 
 
-  
+
   var BarCollectionView = Backbone.View.extend({
     tagName: "div",
 
@@ -476,7 +589,6 @@ var k = {
     dumpString: function () {
       var barCollection = this;
       var out = "";
-      out += " " + this.form.dumpStringBar() + "\n";
       this.each(function (bar) {
         out += bar.dumpString();
         out += " " + barCollection.form.dumpStringBar() + "\n";
@@ -489,6 +601,7 @@ var k = {
 
   var MovementView = Backbone.View.extend({
     tagName: "div",
+    className: "movement",
     templateName: "movement.html",
 
     render: function() {
@@ -514,7 +627,7 @@ var k = {
       this.$el.find("div.notation").empty().append(barCollectionView.$el);
     }
   });
-  
+
   var Movement = Backbone.Model.extend({
     defaults: {
       name: "My movement"
@@ -536,7 +649,7 @@ var k = {
   window.CordCollection = CordCollection;
   window.Rank = Rank;
   window.RankCollection = RankCollection;
-  
+
 }($));
 
 

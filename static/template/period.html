@@ -1,7 +1,17 @@
 <span class="control">
   <a class="addPeriod" href=""><img src="static/image/periodInsert.png"></a>
 </span>
-<span class="notation"/> <span class="duration"><%= period.duration %></span><span class="control">
+<span class="notation"/>
+<span class="duration">
+  <span class="numerator">
+  <%= period.duration.numerator %>
+  </span>
+  /
+  <span class="denominator">
+  <%= period.duration.denominator %>
+  </span>
+</span>
+<span class="control">
   <a class="removePeriod" href=""><img src="static/image/periodRemove.png"></a>
 </span>
 
