@@ -84,10 +84,21 @@ var k = {
 
   var Cord = Backbone.Model.extend({
     defaults: {
+      name: null,
+      frequency: null,
       state: 0
     },
 
     initialize: function (attributes, options) {
+    },
+
+    clone: function () {
+      var other = new Cord({
+        name: this.get("name"),
+        frequency: this.get("frequency"),
+        state: this.get("state")
+      });
+      return other;
     },
 
     dumpString: function () {
@@ -123,12 +134,20 @@ var k = {
     initialize: function (models, options) {
       var collection = this;
 
-      if (options.length) {
+      if (options && options.length) {
         for (var i = 0; i < options.length; i++) {
           models.push(new Cord());
         }
       }
       models = this.models;
+    },
+
+    clone: function () {
+      var other = new CordCollection();
+      this.each(function (cord) {
+        other.add(cord.clone());
+      });
+      return other;
     },
 
     dumpString: function () {
@@ -163,6 +182,19 @@ var k = {
   });
 
   var Rank = Backbone.Model.extend({
+    defaults: {
+      name: null,
+      cordCollection: null
+    },
+
+    clone: function () {
+      var other = new Rank({
+        name: this.get("name"),
+        cordCollection: this.get("cordCollection").clone()
+      });
+      return other;
+    },
+
     dumpString: function () {
       return this.get("cordCollection").dumpString();
     }
@@ -188,6 +220,14 @@ var k = {
   });
 
   var RankCollection = Backbone.Collection.extend({
+    clone: function () {
+      var other = new RankCollection();
+      this.each(function (rank) {
+        other.add(rank.clone());
+      });
+      return other;
+    },
+
     dumpString: function () {
       var out = "";
       this.each(function (rank, i) {
@@ -195,6 +235,25 @@ var k = {
           out += "  ";
         }
         out += rank.dumpString();
+      });
+      return out;
+    },
+
+    dumpStringBar: function () {
+      var rankCollection = this;
+      var out = "";
+      this.each(function (rank, i) {
+        if (!!i) {
+          out += "--";
+        }
+        var length = rank.get("cordCollection").length;
+        length *= 2;
+        if (i == rankCollection.length - 1) {
+          length -= 1;
+        }
+        for (var i = 0; i < length; i ++) {
+          out += "-";
+        }
       });
       return out;
     }
@@ -249,28 +308,11 @@ var k = {
     },
     
     initialize: function (attributes, options) {
-      var c1 = new CordCollection([], {
-        length: 11
-      });
-      var leftRank = new Rank({
-        name: "left",
-        cordCollection: c1
-      });
-      window.c1 = c1;
-      var rightRank = new Rank({
-        name: "right",
-        cordCollection: new CordCollection([], {
-          length: 10
-        })
-      })
-      this.rankCollection = new RankCollection([
-          leftRank,
-          rightRank
-        ]);
+      this.rankCollection = options.form.clone()
     },
     
     dumpString: function () {
-      return this.rankCollection.dumpString() + " " + this.get("duration") + "\n";
+      return " " + this.rankCollection.dumpString() + " " + this.get("duration") + "\n";
     }
     
   });
@@ -329,8 +371,14 @@ var k = {
   });
 
   var PeriodCollection = Backbone.Collection.extend({
+    initialize: function (models, options) {
+      this.form = options.form;
+    },
+
     newPeriod: function(options) {
-      this.add(new Period(), options);
+      this.add(new Period(null, {
+        form: this.form
+      }), options);
     },
     
     dumpString: function () {
@@ -384,7 +432,10 @@ var k = {
     },
     
     initialize: function (attributes, options) {
-      this.periodCollection = new PeriodCollection([new Period()]);
+      this.periodCollection = new PeriodCollection(null, {
+        form: options.form
+      });
+      this.periodCollection.newPeriod();
     },
 
     dumpString: function () {
@@ -416,15 +467,19 @@ var k = {
 
   var BarCollection = Backbone.Collection.extend({
     initialize: function (models, options) {
-      this.add(new Bar());
+      this.form = options.form;
+      this.add(new Bar(null, {
+        form: this.form
+      }));
     },
 
     dumpString: function () {
+      var barCollection = this;
       var out = "";
-      out += "-----\n";
+      out += " " + this.form.dumpStringBar() + "\n";
       this.each(function (bar) {
         out += bar.dumpString();
-        out += "-----\n";
+        out += " " + barCollection.form.dumpStringBar() + "\n";
       });
       return out;
     }
@@ -466,7 +521,9 @@ var k = {
     },
 
     initialize: function (attributes, options) {
-      this.barCollection = new BarCollection();
+      this.barCollection = new BarCollection(null, {
+        form: options.form
+      });
     },
 
     dumpString: function () {
@@ -476,6 +533,9 @@ var k = {
 
   window.Movement = Movement;
   window.MovementView = MovementView;
+  window.CordCollection = CordCollection;
+  window.Rank = Rank;
+  window.RankCollection = RankCollection;
   
 }($));
 
@@ -484,7 +544,29 @@ var k = {
 $(window.document).ready(function () {
   $.ajaxSetup({ "traditional": true });
 
-  var movement = new window.Movement();
+  var c1 = new CordCollection([], {
+    length: 11
+  });
+  var leftRank = new Rank({
+    name: "left",
+    cordCollection: c1
+  });
+  window.c1 = c1;
+  var rightRank = new Rank({
+    name: "right",
+    cordCollection: new CordCollection([], {
+      length: 10
+    })
+  })
+  var form = new RankCollection([
+    leftRank,
+    rightRank
+  ]);
+
+
+  var movement = new window.Movement(null, {
+    form: form
+  });
   var movementView = new window.MovementView({
     model:movement
   });
