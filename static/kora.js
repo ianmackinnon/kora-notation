@@ -145,6 +145,13 @@ var k = {
       } else {
         return "| ";
       }
+    },
+
+    note: function () {
+      if (!this.get("state")) {
+        return;
+      }
+      return this.get("midiNote");
     }
   });
 
@@ -172,7 +179,6 @@ var k = {
 
       if (options && options.midiNotes) {
         _.each(options.midiNotes, function(note) {
-          console.log(note);
           models.push(new Cord({
             midiNote: note
           }));
@@ -195,6 +201,17 @@ var k = {
         out += cord.dumpString();
       });
       return out;
+    },
+
+    notes: function () {
+      var notes = [];
+      this.each(function (cord) {
+        var note = cord.note();
+        if (note) {
+          notes.push(note);
+        }
+      });
+      return notes;
     }
 
   });
@@ -236,6 +253,10 @@ var k = {
 
     dumpString: function () {
       return this.get("cordCollection").dumpString();
+    },
+
+    notes: function() {
+      return this.get("cordCollection").notes();
     }
   });
 
@@ -295,6 +316,16 @@ var k = {
         }
       });
       return out;
+    },
+
+    notes: function() {
+      var notes = [];
+      this.each(function (rank) {
+        _.each(rank.notes(), function (note) {
+          notes.push(note);
+        });
+      });
+      return notes;
     }
   });
 
@@ -407,6 +438,10 @@ var k = {
 
     dumpString: function () {
       return " " + this.rankCollection.dumpString() + " " + this.durationString() + "\n";
+    },
+
+    notes: function() {
+      return this.rankCollection.notes();
     }
 
   });
@@ -501,6 +536,14 @@ var k = {
     templateName: "bar.html",
 
     events: {
+      "click button.play": function (event) {
+        if (event.which !== 1 || event.metakey || event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+        this.play();
+      },
+
       "click > .control > .addPeriod": function (event) {
         if (event.which !== 1 || event.metakey || event.shiftKey) {
           return;
@@ -536,6 +579,18 @@ var k = {
       var duration = this.model.duration();
       this.$el.find(".header .numerator").text(duration.numerator);
       this.$el.find(".header .denominator").text(duration.denominator);
+    },
+
+    play: function () {
+      var delay = 0;
+      this.model.periodCollection.each(function(period) {
+        var duration = period.get("duration").toFloat() * window.slow;
+        _.each(period.notes(), function(note) {
+          MIDI.noteOn(0, note, 32, delay);
+          MIDI.noteOff(0, note, delay + duration);
+        });
+        delay += duration;
+      });
     }
 
   });
@@ -707,6 +762,7 @@ $(window.document).ready(function () {
     }
   });
 
+  window.slow = 4;
 
   window.movement = movement;
 
