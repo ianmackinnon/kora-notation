@@ -89,6 +89,13 @@ var k = {
           this.model.set("state", 0);
           return;
         }
+        var note = this.model.get("midiNote");
+        if (note) {
+          var delay = 0;
+          var velocity = 127;
+          MIDI.noteOn(0, note, velocity, delay);
+          MIDI.noteOff(0, note, delay + 0.25);
+        }
         var y = event.clientY - this.$el.offset().top;
         if (y > 8) {
           this.model.set("state", 1);
@@ -116,6 +123,7 @@ var k = {
     defaults: {
       name: null,
       frequency: null,
+      midiNote: null,
       state: 0
     },
 
@@ -123,6 +131,7 @@ var k = {
       var other = new Cord({
         name: this.get("name"),
         frequency: this.get("frequency"),
+        midiNote: this.get("midiNote"),
         state: this.get("state")
       });
       return other;
@@ -161,10 +170,13 @@ var k = {
     initialize: function (models, options) {
       var collection = this;
 
-      if (options && options.length) {
-        for (var i = 0; i < options.length; i++) {
-          models.push(new Cord());
-        }
+      if (options && options.midiNotes) {
+        _.each(options.midiNotes, function(note) {
+          console.log(note);
+          models.push(new Cord({
+            midiNote: note
+          }));
+        });
       }
       models = this.models;
     },
@@ -658,7 +670,7 @@ $(window.document).ready(function () {
   $.ajaxSetup({ "traditional": true });
 
   var c1 = new CordCollection([], {
-    length: 11
+    midiNotes: [76, 72, 69, 65, 62, 58, 55, 52, 50, 48, 41]
   });
   var leftRank = new Rank({
     name: "left",
@@ -668,7 +680,7 @@ $(window.document).ready(function () {
   var rightRank = new Rank({
     name: "right",
     cordCollection: new CordCollection([], {
-      length: 10
+      midiNotes: [53, 57, 60, 64, 67, 70, 74, 77, 79, 81]
     })
   })
   var form = new RankCollection([
@@ -686,5 +698,16 @@ $(window.document).ready(function () {
   movementView.render();
   $("body").append(movementView.$el);
 
+  MIDI.loadPlugin({
+    soundfontUrl: "./static/soundfont/",
+    instrument: "acoustic_grand_piano",
+    callback: function() {
+      // play the note
+      MIDI.setVolume(0, 127);
+    }
+  });
+
+
   window.movement = movement;
+
 });

@@ -1,6 +1,7 @@
 SHELL := /bin/bash
+.PHONY : all clean midi
 
-all : jquery.min.js underscore-min.js backbone-min.js jquery.history.js URI.min.js ZeroClipboard.min.js ZeroClipboard.swf fraction.js
+all : jquery.min.js underscore-min.js backbone-min.js jquery.history.js URI.min.js ZeroClipboard.min.js ZeroClipboard.swf fraction.js midi
 
 clean :
 	rm -f backbone-min.js underscore-min.js jquery.history.js URI.min.js ZeroClipboard.min.js ZeroClipboard.swf
@@ -37,3 +38,5 @@ fraction.js:
 	wget https://raw.github.com/cntx/fraction.js/master/$@ -O $@ || rm -f $@
 	ln -sf ../vendor/$@ ../static/$@
 
+midi :
+	make -C midi
